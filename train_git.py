@@ -8,7 +8,10 @@ import spacy
 import en_core_web_sm
 from spacy.gold import GoldParse
 from spacy.tagger import Tagger
+import pyttsx
 
+print("Loading TTS")
+engine = pyttsx.init()
 print("Loading initial model")
 nlp = en_core_web_sm.load()
 def train_ner(nlp, train_data, output_dir):
@@ -55,6 +58,12 @@ def classify(text):
             schedule[ent.label_] = ent.text
     headers = {'Content-type': 'application/json'}
     r = requests.post('https://selva.cfapps.io/schedule',json=schedule, headers=headers)
+    if r.status_code == 201:
+        engine.say('Procedure Scheduled successfully.')
+        engine.say('Would you like to send the order?')
+    else:
+        engine.say("The procedure does not exist in Nuke Track. Please configure the procedure before scheduling it.")
+    engine.runAndWait()
     print(r)
 
 def initialize():
