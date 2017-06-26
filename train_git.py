@@ -9,9 +9,11 @@ import en_core_web_sm
 from spacy.gold import GoldParse
 from spacy.tagger import Tagger
 import pyttsx
+import voice_recognition
 
 print("Loading TTS")
 engine = pyttsx.init()
+engine.setProperty('rate', 150)
 print("Loading initial model")
 nlp = en_core_web_sm.load()
 def train_ner(nlp, train_data, output_dir):
@@ -43,6 +45,13 @@ def train_ner(nlp, train_data, output_dir):
         if not output_dir.exists():
             output_dir.mkdir()
         nlp.save_to_directory(output_dir)
+		
+def conversationHandler(text):
+    if text == 'yes':
+	    engine.say('Order processed successfully.')
+    else: 
+        engine.say('Please make sure to send the order before the end of your day.')
+    engine.runAndWait()
 
 def classify(text):
     # Test that the entity is recognized
@@ -53,6 +62,7 @@ def classify(text):
         test = open('test.tsv', 'r')
     for row in test: 
         doc = nlp(unicode(row))
+        print("Document Sentiment:",doc.sentiment);
         print("Ents in :", row)
         for ent in doc.ents:
             schedule[ent.label_] = ent.text
@@ -65,7 +75,9 @@ def classify(text):
         engine.say("The procedure does not exist in Nuke Track. Please configure the procedure before scheduling it.")
     engine.runAndWait()
     print(r)
-
+    voice_recognition.listenAndDecode(conversationHandler)
+    
+	
 def initialize():
     train_data = []
     f = open('simplified.tsv', 'r')
@@ -78,7 +90,8 @@ def initialize():
     nlp.entity.add_label(u'procedure')
     nlp.entity.add_label(u'patient')
     train_ner(nlp, train_data, None)
+    voice_recognition.listenAndDecode(classify)
 
 if __name__ == '__main__':
     import plac
-    plac.call(main)
+    plac.call(initialize)
