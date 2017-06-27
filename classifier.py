@@ -22,7 +22,6 @@ def train_ner(nlp, train_data, output_dir):
     # guess what rate you should set, especially when you have limited data.
     nlp.entity.model.learn_rate = 0.001
     for itn in range(200):
-        print("Epoch #:", itn)
         random.shuffle(train_data)
         loss = 0.
         for raw_text, entity_offsets in train_data:
@@ -35,7 +34,6 @@ def train_ner(nlp, train_data, output_dir):
     # This step averages the model's weights. This may or may not be good for
     # your situation --- it's empirical.
     nlp.end_training()
-    print("Training Complete")
     if output_dir:
         if not output_dir.exists():
             output_dir.mkdir()
@@ -94,9 +92,10 @@ def initialize():
     nlp.entity.add_label(u'procedure')
     nlp.entity.add_label(u'patient')
     train_ner(nlp, train_data, None)
+    print("Hey there!")
 
 initialize()
 
 if __name__ == '__main__':
     import plac
-    plac.call(initialize)
+    plac.call(initialize())
