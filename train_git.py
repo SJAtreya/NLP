@@ -90,6 +90,8 @@ def initialize():
     nlp.entity.add_label(u'procedure')
     nlp.entity.add_label(u'patient')
     train_ner(nlp, train_data, None)
+    engine.say("What would you like to do?")
+    engine.runAndWait()
     voice_recognition.listenAndDecode(classify)
 
 if __name__ == '__main__':
