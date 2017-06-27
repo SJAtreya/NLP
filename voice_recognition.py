@@ -1,33 +1,51 @@
 #!/usr/bin/env python3
 
 import speech_recognition as sr
+import requests
+import pyttsx
+print("Loading TTS...")
+engine = pyttsx.init()
+engine.setProperty('rate', 165)
+print("Starting voice recognizer...")
+r = sr.Recognizer()
+api = "/"
+def conversationHandler(text):
+    engine.say(text)
+    engine.runAndWait()
 
-def listenAndDecode(callback):
-    # obtain audio from the microphone
-    print("Listening for command...")
-    r = sr.Recognizer()
+def listenAndDecode(api):
+    callback = "/"
+    text = None
     with sr.Microphone() as source:
-        isQuestionToAtom = False
-        while isQuestionToAtom == False:
-            audio = r.listen(source)
-        # recognize speech using Sphinx
-        '''try:
-            print("Sphinx thinks you said " + r.recognize_sphinx(audio))
-        except sr.UnknownValueError:
-            print("Sphinx could not understand audio")
-        except sr.RequestError as e:
-            print("Sphinx error; {0}".format(e))'''
-        # recognize speech using Google Speech Recognition
+        audio = r.listen(source)
         try:
-            # for testing purposes, we're just using the default API key
-            # to use another API key, use `r.recognize_google(audio, key="GOOGLE_SPEECH_RECOGNITION_API_KEY")`
-            # instead of `r.recognize_google(audio)`
             text = r.recognize_google(audio)
-            print("What I understood:",text)			
-            isQuestionToAtom = text.startswith("Atom")
-            print("Google Speech Recognition thinks you said " + text)
+            print("Did you say: " + text)
         except sr.UnknownValueError:
-            print("Google Speech Recognition could not understand audio")
+            text = None
+            print("Sorry, I could not understand, say that again please?")
         except sr.RequestError as e:
-            print("Could not request results from Google Speech Recognition service; {0}".format(e))
-    callback(text)
+            text = None
+            print("Apparently I'm having trouble contacting my server.")
+    if text is not None:
+        try:
+            print ("Api:", api)		
+            response = requests.post('http://10.211.4.210:8888'+api+'?query='+text)
+            print (response)
+            parsedResponse = response.json()
+            print (parsedResponse['status'])
+            if parsedResponse['status'] == "Success":
+			    print (parsedResponse['callback'])
+			    callback = parsedResponse['callback']
+            else:
+                callback = "/"
+            conversationHandler(parsedResponse['message'])
+        except:
+            conversationHandler("Sorry, I'm unable to contact Nuke Trac at this time.")
+    return callback
+
+if __name__ == "__main__":
+    api = "/"
+    while(True):
+        print("Listening for command...")
+        api = listenAndDecode(api)
