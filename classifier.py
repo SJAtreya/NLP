@@ -78,8 +78,9 @@ def classify(text):
     for row in test: 
         doc = nlp(unicode(row))
         for ent in doc.ents:
-            print(ent.label_,":", ent.text)
-            parsed[ent.label_] = ent.text
+            if ent.label_ not in parsed:
+                print(ent.label_,":", ent.text)
+                parsed[ent.label_] = ent.text
     headers = {'Content-type': 'application/json'}
     response = requests.post('https://selva.cfapps.io/schedule',json=parsed, headers=headers)
     return processResponse(parsed, response)
