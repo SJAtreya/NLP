@@ -17,7 +17,7 @@ def train_ner(nlp, train_data, output_dir):
         doc = nlp.make_doc(raw_text)
         for word in doc:
             _ = nlp.vocab[word.orth]
-    random.seed(0)
+    random.seed(42)
     # You may need to change the learning rate. It's generally difficult to
     # guess what rate you should set, especially when you have limited data.
     nlp.entity.model.learn_rate = 0.001
@@ -33,7 +33,6 @@ def train_ner(nlp, train_data, output_dir):
             break
     # This step averages the model's weights. This may or may not be good for
     # your situation --- it's empirical.
-    nlp.end_training()
     if output_dir:
         if not output_dir.exists():
             output_dir.mkdir()
@@ -43,29 +42,34 @@ def processResponse(parsed, response):
     message = ""
     status = "Failed"
     callback = ""
-    if 'Schedule' in parsed:
+    if 'Intent' not in parsed:
+        return {message: "Sorry, I could not understand. Are you requesting for scheduling a patient? If so, say, schedule procedure for patient", 'status': status, callback:callback}
+    if parsed['Intent'] == 'schedule':
         if response.status_code == 201:
-            if 'procedure' in parsed:
-			    message = parsed['procedure'] + ' Scheduled successfully. Would you like to send the order?'
+            if 'Who' in parsed:
+			    message = "Procedure Scheduled successfully for "+ parsed['Who'] +". Would you like to send the order?"
             else:
-                message = 'Procedure Scheduled successfully. Would you like to send the order?'
+                message = 'Procedure Scheduled successfully per physician order. Would you like to send it?'
             status = "Success"
             callback = "/order"			
         else:
             message = "There was a problem scheduling the procedure in Nuke Track. Please validate if the configuration is valid."
-    elif 'Order' in parsed:
+    elif parsed['Intent'] == 'performing':
         if response.status_code == 201:
-            message = 'Order processed successfully.'
+            group = "you"
+            if 'Who' in parsed:
+                group = parsed['Who']
+            message = 'Okay. I will record the readings for '+group+"."
             status = "Success"
-            callback = "/status"
+            callback = "/task"
         else:
-            message = "There was a problem processind the order in Nuke Track."
+            message = "I'm unable to find an configuration for that task."
     else:
-        message = "Sorry, I could not understand. Are you requesting for scheduling a patient?"
+        message = "Oops, I don't support "+ parsed['Intent'] + " yet."
     return {'message': message, 'status': status, 'callback':callback}
 
 def classify(text):
-    # Test that the entity is recognized
+    print("Atom is trying to understand what you said: "+text)
     parsed = dict()
     if text is not None:
         test = [text]
@@ -80,22 +84,37 @@ def classify(text):
     response = requests.post('https://selva.cfapps.io/schedule',json=parsed, headers=headers)
     return processResponse(parsed, response)
 		
-def initialize():
+def initializeSchedule():
     train_data = []
+    survey = open('survey.txt', 'r')
+    for line in survey:
+        start = line.index('performing')
+        forStart = line.index('for')
+        at = line.index('at')
+        train_data.append((unicode(line),[(start, start+10, u'Intent'), (start+11,forStart,u'What') ,(forStart+4, at,u'Who')]))
     f = open('simplified.tsv', 'r')
     for line in f: 
         start = line.index('schedule')
         forStart = line.index('for')
         at = line.index('at')
-        train_data.append((unicode(line),[(start, start+8, u'Schedule'), (start+9,forStart,u'procedure') ,(forStart+4, at,u'patient')]))
-    nlp.entity.add_label(u'Schedule')
-    nlp.entity.add_label(u'procedure')
-    nlp.entity.add_label(u'patient')
+        train_data.append((unicode(line),[(start, start+8, u'Intent'), (start+9,forStart,u'What') ,(forStart+4, at,u'Who')]))
+    nlp.entity.add_label(u'Intent')
+    nlp.entity.add_label(u'What')
+    nlp.entity.add_label(u'Who')
     train_ner(nlp, train_data, None)
-    print("Hey there!")
+    #print(classify("schedule an ultrasound"))
+    #print(classify("I am performing area survey for group1"))
+    #print(classify("I am performing function check for group1"))
 
-initialize()
+'''def initializeHealthPhysics():
+    train_data = []
+    train_ner(nlp, train_data, None)'''
+	
+initializeSchedule()
+print("Hey! I'm Atom!")
+
+nlp.end_training()
 
 if __name__ == '__main__':
     import plac
-    plac.call(initialize())
+    plac.call(initializeSchedule)

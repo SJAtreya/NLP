@@ -3,6 +3,8 @@
 import speech_recognition as sr
 import requests
 import pyttsx
+import sys
+
 print("Loading TTS...")
 engine = pyttsx.init()
 engine.setProperty('rate', 165)
@@ -18,6 +20,7 @@ def listenAndDecode(api):
     text = None
     with sr.Microphone() as source:
         audio = r.listen(source)
+        print("Captured Audio... Waiting for transcript")
         try:
             text = r.recognize_google(audio)
             print("Did you say: " + text)
@@ -41,6 +44,7 @@ def listenAndDecode(api):
                 callback = "/"
             conversationHandler(parsedResponse['message'])
         except:
+            print "Unexpected error:", sys.exc_info()[0]
             conversationHandler("Sorry, I'm unable to contact Nuke Trac at this time.")
     return callback
 
