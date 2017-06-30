@@ -1,6 +1,0 @@
-I am performing function check for ludlum at 11AM
-I am performing function check for atomlab at 11AM
-I am performing channel check for atomlab at 11AM
-I am performing efficiency test for ludlum at 11AM
-I am performing area survey for group1 at 11AM
-I am performing wipe survey for group1 at 11AM
