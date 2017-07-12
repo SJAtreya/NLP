@@ -2,9 +2,9 @@ from __future__ import print_function
 from preprocessor import Dataset
 from sklearn.model_selection import train_test_split
 from keras.preprocessing import sequence
-from keras.models import Sequential
-from keras.layers import Dense, Embedding, Dropout
-from keras.layers import LSTM
+from keras.layers import Dense, Input, Flatten
+from keras.layers import Conv1D, MaxPooling1D, Embedding
+from keras.models import Model
 from keras.datasets import imdb
 from keras.preprocessing.text import Tokenizer
 from keras import optimizers
@@ -46,7 +46,6 @@ print ("Labels created...")
 x_train, x_test, y_train, y_test = train_test_split(
                                    padded_sequences,labels,test_size=0.2, random_state=42)
 print('train test split complete')
-print (labels)
 test_data = open('test/test.csv').read().split('\n')
 print(test_data)
 test_tokenizer = Tokenizer(num_words=max_features)
@@ -76,20 +75,34 @@ for word, i in word_index.items():
         embedding_matrix[i] = embedding_vector
 
 print('Build model...')
-model = Sequential()
-model.add(Embedding(num_words, 10,weights=[embedding_matrix],input_shape=(maxlen,), trainable=False))
-model.add(LSTM(32, dropout=0.001, recurrent_dropout=0.001, return_sequences=True))
-model.add(LSTM(32, return_sequences=True))
-model.add(LSTM(32))
-model.add(Dense(4, activation='softmax'))
 
-# try using different optimizers and different optimizer configs
-optimizer = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+
+embedding_layer = Embedding(num_words,
+                            EMBEDDING_DIM,
+                            weights=[embedding_matrix],
+                            input_shape=(maxlen,),
+                            trainable=False)
+
+print('Training model.')
+
+# train a 1D convnet with global maxpooling
+sequence_input = Input(shape=(maxlen,), dtype='int32')
+embedded_sequences = embedding_layer(sequence_input)
+x = Conv1D(128, 5, activation='relu')(embedded_sequences)
+x = MaxPooling1D(5)(x)
+#x = Conv1D(128, 5, activation='relu')(x)
+#x = MaxPooling1D(5)(x)
+#x = Conv1D(128, 5, activation='relu')(x)
+#x = MaxPooling1D(35)(x)
+x = Flatten()(x)
+x = Dense(128, activation='relu')(x)
+preds = Dense(4, activation='softmax')(x)
+optimizer = optimizers.Adam(lr=0.5, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+model = Model(sequence_input, preds)
 model.compile(loss='categorical_crossentropy',
               optimizer=optimizer,
-              metrics=['accuracy'])
+              metrics=['acc'])
 
-print('Train...')
 model.fit(x_train, y_train,
           batch_size=batch_size,
           epochs=100,
